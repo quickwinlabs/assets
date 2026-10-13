@@ -12,7 +12,7 @@ ffmpeg 等工具链二进制。一个资产族 = 一个 release(tag + 分卷 + `
 |---|---|---|---|---|
 | XP | `win-isos-xp` | `build-xp.yml` | `zh-hans_windows_xp_professional_with_service_pack_3_x86_cd_vl_x14-74070.iso` | 602MB |
 | Win7 | `win-isos-win7` | `build-win7.yml` | `cn_windows_7_ultimate_with_sp1_x64_dvd_u_677408.iso` | 3.2GB |
-| Tiny11 | `win-isos-tiny11` | `build-tiny11.yml` | `Tiny11Core-25H2-...iso` 或备源 `tiny11core_25H2_Nov25.iso` | 3.0GB |
+| Tiny11 | `win-isos-tiny11` | `build-tiny11.yml` | `tiny11core_25H2_Nov25.iso` | 3.3GB |
 
 ### 消费方式
 

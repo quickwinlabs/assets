@@ -86,15 +86,14 @@ get_iso_info() {
             )
             ;;
         "tiny11" )
-            FILE="Tiny11Core-25H2-26200.8037-English-Pro-2026-08-23.iso"
-            SIZE=""
+            # canonical = archive.org NTDEV 官方镜像 Nov25 core(2026-10 探测: item 仍存活)。
+            # SF 上的 2026-08-23 构建对数据中心 IP 被 Cloudflare 拦(runner 必败)、
+            # 且文件名/内容与 archive.org 盘不同 —— 为避免"资产名与内容不符",统一用
+            # Nov25 单源(发布后的消费方走本仓 release,镜像源只影响重建)。
+            FILE="tiny11core_25H2_Nov25.iso"
+            SIZE="3304132608"
             SHA=""
-            # SourceForge 对所有镜像主机都先回一张 HTML 中转页，真实地址藏在
-            # <noscript> 的 meta refresh 里（带时效签名 ts=）。必须靠 resolve_url 解析。
-            # 注意: SF 对数据中心 IP（如 GitHub runner）会被 Cloudflare bot 防护拦，
-            # 故备源为 archive.org 上的 NTDEV 官方镜像（文件名/校验不同，跳过 SHA）。
             URLS=(
-                "https://downloads.sourceforge.net/project/tiny-11-releases/Tiny11Core-Pro-25H2/${FILE}"
                 "https://archive.org/download/tiny11_25H2/tiny11core_25H2_Nov25.iso"
             )
             ;;
