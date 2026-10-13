@@ -1,0 +1,20 @@
+name: publish ISO (win7)
+
+# Win7 旗舰版 SP1 x64 中文 —— 手动触发;重跑覆盖 win-isos-win7 release 的分卷资产
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download, split and publish
+        run: ./scripts/publish.sh 7u
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

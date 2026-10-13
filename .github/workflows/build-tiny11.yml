@@ -1,0 +1,21 @@
+name: publish ISO (tiny11)
+
+# Tiny11 Core 25H2 x64 英文(第三方精简盘)—— 手动触发;重跑覆盖 win-isos-tiny11 release 的分卷资产
+# 注: SourceForge 对数据中心 IP 有 Cloudflare 拦截,runner 上通常走 archive.org 备源(文件名不同)
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download, split and publish
+        run: ./scripts/publish.sh tiny11
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
