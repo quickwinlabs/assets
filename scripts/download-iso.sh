@@ -56,9 +56,13 @@ get_iso_info() {
             SIZE="3420557312"
             SHA="70cdfb0cdcbeb2659163e9417d5c242b37ae564da810e7da21dac5c8492ab72f"
             # 镜像源列表（按优先级排序）
+            # 注: 原 item(cn_windows_7_..._u_677408)已被微软 DMCA 撤除、testip 源站 521
+            #     —— 换用 archive.org 上仍存活的同文件 item(多备几个, SHA256 兜底错文件)
             URLS=(
+                "https://archive.org/download/Win7UltimateSP1CHS/cn_windows_7_ultimate_with_sp1_x64_dvd_u_677408.iso"
+                "https://archive.org/download/cn_windows_7_ultimate_with_sp1_x64_dvd_u_677408_202011/cn_windows_7_ultimate_with_sp1_x64_dvd_u_677408.iso"
+                "https://archive.org/download/windows_7_Ult_wit_sp1_10_lang/cn_windows_7_ultimate_with_sp1_x64_dvd_u_677408.iso"
                 "https://download.testip.xyz/windows/cn_windows_7_ultimate_with_sp1_x64_dvd_u_677408.iso"
-                "https://archive.org/download/cn_windows_7_ultimate_with_sp1_x64_dvd_u_677408/cn_windows_7_ultimate_with_sp1_x64_dvd_u_677408.iso"
             )
             ;;
         "10" )
