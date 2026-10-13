@@ -25,6 +25,8 @@ case "$TYPE" in
 esac
 
 command -v gh >/dev/null 2>&1 || { echo "[ERROR] 需要 gh CLI"; exit 1; }
+# gh 需要仓库上下文 —— 下面会 cd 到临时目录, 显式指定 repo(本地/CI 通用)
+export GH_REPO="${GITHUB_REPOSITORY:-quickwinlabs/assets}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORK="$(mktemp -d)"
