@@ -40,11 +40,14 @@ sha256 是唯一 integrity 锚点:release 资产可被重跑覆盖(`--clobber`),
 (`scripts/make-image-release.sh`;`build-image.yml` 手动触发,一次一个 type)。
 给不想自己装 Windows 的人直接下载使用。
 
-| 类型 | release tag | 源 ISO | 盘 | 压缩前 | 压缩后 |
+| 类型 | release tag | 源 ISO | 盘 | 压缩前 → 压缩后 | 卷数 |
 |---|---|---|---|---|---|
-| XP | `win-images-xp` | `win-isos-xp` | `xp_ready.qcow2` | 1.5GB | 待实测 |
-| Win7 | `win-images-win7` | `win-isos-win7` | `win7_ready.qcow2` | 7.4GB | 待实测 |
-| Tiny11 标准盘 | `win-images-win11` | `win-isos-tiny11-std` | `win11_ready.qcow2` | 12.5GB | 待实测 |
+| XP | `win-images-xp` | `win-isos-xp` | `xp_ready.qcow2` | 1.46GiB → 0.75GiB (52%) | 1 |
+| Win7 | `win-images-win7` | `win-isos-win7` | `win7_ready.qcow2` | 7.33GiB → 3.36GiB (46%) | 2 |
+| Tiny11 标准盘 | `win-images-win11` | `win-isos-tiny11-std` | `win11_ready.qcow2` | 12.0GiB → 10.1GiB (84%) | 6 |
+
+(以上为 2026-10 实测值。win11 压不动是有原因的:25H2 盘里大部分是已压缩内容
+——installer 载荷、Defender 定义库,不像 XP/Win7 那样满是可压的系统文件。)
 
 压缩用 qcow2 原生压缩簇(`qemu-img convert -c -o compression_type=zstd`):qemu
 能直接读(不必先解压),同时把整盘压小、再按 <2GiB 分卷。**代价:需要 qemu
