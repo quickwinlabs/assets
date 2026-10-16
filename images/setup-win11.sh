@@ -20,7 +20,10 @@ START_TIME=$(date +%s)
 # win11core/core = 精简 tiny11 core(Defender 已剥离)，即 run.sh win11core。
 TAG="${1:-}"
 case "$TAG" in
-    ""|win11|std)   SFX="";      ISO_HINT="${2:-Tiny11-25H2-}" ;;  # 标准 tiny11(25H2,可服务,带 Defender)
+    # 标准 tiny11(25H2,可服务,带 Defender)。ISO 来自本仓 win-isos-tiny11-std,
+    # 资产名是 tiny11_25H2_Nov25.iso(上游 SF 那份叫 Tiny11-25H2-*.iso,不是本仓的)。
+    # 片段别用 "25H2" 这种更宽的: 会和 core 盘撞上。
+    ""|win11|std)   SFX="";      ISO_HINT="${2:-tiny11_25H2_}" ;;
     win11core|core) SFX="-core"; ISO_HINT="${2:-Tiny11Core}"   ;;  # tiny11 core(Defender 已禁用)
     *)              echo "未知变体: $TAG（可选 win11|std|win11core|core，留空 = win11）"; exit 1 ;;
 esac
