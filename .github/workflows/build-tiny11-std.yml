@@ -1,0 +1,22 @@
+name: publish ISO (tiny11 std)
+
+# Tiny11 标准盘 25H2 x64 英文(第三方精简盘,可服务化、自带 Defender)—— 手动触发;
+# 重跑覆盖 win-isos-tiny11-std release 的分卷资产
+# 注: SourceForge 对 GitHub runner IP 段间歇 403(Cloudflare 反爬),故走 archive.org 单源
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download, split and publish
+        run: ./scripts/publish.sh tiny11std
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

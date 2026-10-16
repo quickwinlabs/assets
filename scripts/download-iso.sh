@@ -3,10 +3,11 @@ set -e
 
 # ============================================================
 #  自动下载 Windows ISO
-#  用法: ./download-iso.sh <xp|7u|10|11|tiny11> [目标目录]
+#  用法: ./download-iso.sh <xp|7u|10|11|tiny11|tiny11std> [目标目录]
 #
 #  镜像源: download.testip.xyz (主), archive.org (备); 10/11 仍用 bobpony/files.dog
-#           tiny11 走 SourceForge (主), archive.org 备源
+#           tiny11/tiny11std 走 archive.org(NTDEV 官方 item 的 Nov25 批次)
+#  注: SourceForge 对 GitHub runner IP 段间歇 403(Cloudflare 反爬),不作主源
 #  下载完成后校验 SHA256
 # ============================================================
 
@@ -20,13 +21,14 @@ warn()  { echo -e "${YELLOW}[$(ts)] [WARN]${NC} $*"; }
 error() { echo -e "${RED}[$(ts)] [ERROR]${NC} $*"; exit 1; }
 
 if [ -z "$VERSION" ]; then
-    echo "用法: $0 <xp|7u|10|11|tiny11> [目标目录]"
+    echo "用法: $0 <xp|7u|10|11|tiny11|tiny11std> [目标目录]"
     echo ""
-    echo "  xp     - Windows XP Professional SP3 中文 VL (601MB)"
-    echo "  7u     - Windows 7 Ultimate SP1 x64 中文 (3.2GB)"
-    echo "  10     - Windows 10 22H2 x64 (5.7GB)"
-    echo "  11     - Windows 11 25H2 x64 (7.9GB)"
-    echo "  tiny11 - Tiny11 Core 25H2 Pro x64 英文 (2.96GB, 不可服务化精简版)"
+    echo "  xp       - Windows XP Professional SP3 中文 VL (601MB)"
+    echo "  7u       - Windows 7 Ultimate SP1 x64 中文 (3.2GB)"
+    echo "  10       - Windows 10 22H2 x64 (5.7GB)"
+    echo "  11       - Windows 11 25H2 x64 (7.9GB)"
+    echo "  tiny11   - Tiny11 Core 25H2 Pro x64 英文 (3.3GB, 不可服务化精简版)"
+    echo "  tiny11std- Tiny11 25H2 Pro x64 英文 标准版 (5.3GB, 可服务化, 自带 Defender)"
     exit 1
 fi
 
@@ -87,7 +89,7 @@ get_iso_info() {
             ;;
         "tiny11" )
             # canonical = archive.org NTDEV 官方镜像 Nov25 core(2026-10 探测: item 仍存活)。
-            # SF 上的 2026-08-23 构建对数据中心 IP 被 Cloudflare 拦(runner 必败)、
+            # SF 上的 2026-08-23 构建对 GitHub runner IP 段间歇 403(Cloudflare 反爬)、
             # 且文件名/内容与 archive.org 盘不同 —— 为避免"资产名与内容不符",统一用
             # Nov25 单源(发布后的消费方走本仓 release,镜像源只影响重建)。
             FILE="tiny11core_25H2_Nov25.iso"
@@ -97,8 +99,21 @@ get_iso_info() {
                 "https://archive.org/download/tiny11_25H2/tiny11core_25H2_Nov25.iso"
             )
             ;;
+        "tiny11std" | "tiny11-std" )
+            # 标准盘(可服务化, 自带 Windows Update/Defender) —— 与 core 同一 archive.org
+            # item、同一 Nov25 批次, 资产名即 tiny11_25H2_Nov25.iso。
+            # 不设 SF 备源: 那边是另一份构建(名字/内容都不同), 当 fallback 会"资产名与
+            # 内容不符"; 且 SF 对 runner IP 段间歇 403。SIZE/SHA 留空 —— 精确值由发布时
+            # 实测写入 release 的 SHA256SUMS.txt, 消费方门禁在 quickwin 仓(OWN_SIZE/OWN_SHA)。
+            FILE="tiny11_25H2_Nov25.iso"
+            SIZE=""
+            SHA=""
+            URLS=(
+                "https://archive.org/download/tiny11_25H2/tiny11_25H2_Nov25.iso"
+            )
+            ;;
         * )
-            error "不支持的版本: $version (支持: xp, 7u, 10, 11, tiny11)"
+            error "不支持的版本: $version (支持: xp, 7u, 10, 11, tiny11, tiny11std)"
             ;;
     esac
 }
