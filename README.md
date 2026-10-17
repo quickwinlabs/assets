@@ -44,7 +44,7 @@ sha256 是唯一 integrity 锚点:release 资产可被重跑覆盖(`--clobber`),
 |---|---|---|---|---|---|
 | XP | `win-images-xp` | `win-isos-xp` | `xp_ready.qcow2` | 1.46GiB → 0.75GiB (52%) | 1 |
 | Win7 | `win-images-win7` | `win-isos-win7` | `win7_ready.qcow2` | 7.33GiB → 3.36GiB (46%) | 2 |
-| Tiny11 标准盘 | `win-images-win11` | `win-isos-tiny11-std` | `win11_ready.qcow2` | 12.0GiB → 10.1GiB (84%) | 6 |
+| Tiny11 标准盘 | `win-images-win11` | `win-isos-tiny11-std` | `win11_ready.qcow2` | 12.7GiB → 10.4GiB (82%) | 6 |
 
 (以上为 2026-10 实测值。win11 压不动是有原因的:25H2 盘里大部分是已压缩内容
 ——installer 载荷、Defender 定义库,不像 XP/Win7 那样满是可压的系统文件。)
