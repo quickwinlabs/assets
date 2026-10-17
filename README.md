@@ -85,6 +85,8 @@ release**(装机用),不要互相调用。
   的 `type` 选项各加一项;装新系统还要加 `images/setup-<type>.sh` 与其 floppy 目录。
 - **装机脚本**:`images/setup-*.sh` 是 quickwin `docker/setup-*.sh` 的副本,
   改装机逻辑时两边都要改(差异只在 ISO 来源、OVMF 路径与产物用途)。
+  Win11 两侧都**不含 TPM/Secure Boot**:硬件检查由 `Autounattend.xml` 的
+  `LabConfig` 键在 WinPE 阶段绕过,runner 侧因此用非 secboot 的 4M OVMF。
 
 ## 版权说明
 

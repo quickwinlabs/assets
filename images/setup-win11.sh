@@ -3,14 +3,15 @@ set -e
 cd "$(dirname "$0")"
 
 # ============================================================
-#  Bare QEMU Win11 — 安装阶段（UEFI + Secure Boot + TPM 2.0)
+#  Bare QEMU Win11 — 安装阶段（UEFI，无 Secure Boot / TPM）
 #  安装 Win11 → 发布预装盘（assets 仓侧：win-images-win11）
 #  用法: ./setup-win11.sh [变体名] [ISO 片段]
 #    变体名: 留空|win11|std = 标准 tiny11(带 Defender) → win11_ready.qcow2，即 run.sh win11;
 #            win11core|core = tiny11 core → win11_ready-core.qcow2，即 run.sh win11core
 #    ISO 片段: 匹配 iso/win11/*<片段>*.iso —— 覆盖内置映射，免去挪动 ISO 文件
 #
-#  硬件合规: q35 + OVMF_secboot(pflash) + swtpm(tpm-tis)
+#  硬件检查: 由 Autounattend 的 RunSynchronous 写 LabConfig 绕过（BypassTPMCheck 等 5 项：
+#            TPM/SecureBoot/RAM/CPU/Storage），因此 q35 + 普通 OVMF(pflash) 即可，不需要 swtpm / tpm-tis。
 #  安装阶段完全离线（无网卡）：install.bat 只注册开机自启后关机。
 #  ci_share 的链接由 run.sh 负责。
 # ============================================================
@@ -31,23 +32,20 @@ DISK=snapshots/win11_install$SFX.qcow2
 SNAPSHOT=snapshots/win11_ready$SFX.qcow2
 VARS=snapshots/win11_VARS$SFX.qcow2
 FLOPPY_DIR=floppy-win11
-# 注意: 新版 edk2-ovmf 的 2M 版 OVMF（OVMF_CODE.secboot.fd）为塞尺寸剔除了
-#       TPM 支持，Windows 11 会报 "必须支持 TPM 2.0"；必须用 4M 版。
+# 4M 版 OVMF 是 code/vars 分离（raw .fd），必须搭配一份可写 VARS（见下方 cp）。
+# 用不带 Secure Boot 的那一对即可：硬件检查已由 LabConfig 绕过，不再需要 TPM/SB。
 # 路径按 runner 的实际环境写死（Ubuntu 的 ovmf 包，raw .fd）；
 # 本地换发行版时用 OVMF_CODE/OVMF_VARS 环境变量覆盖（两者要一起设）。
-OVMF_CODE="${OVMF_CODE:-/usr/share/OVMF/OVMF_CODE_4M.secboot.fd}"
-OVMF_VARS="${OVMF_VARS:-/usr/share/OVMF/OVMF_VARS_4M.ms.fd}"
-TPM_DIR=/tmp/tpm-win11$SFX
-TPM_SOCK=/tmp/swtpm-win11$SFX.sock
-TPM_PID=/tmp/swtpm-win11$SFX.pid
+OVMF_CODE="${OVMF_CODE:-/usr/share/OVMF/OVMF_CODE_4M.fd}"
+OVMF_VARS="${OVMF_VARS:-/usr/share/OVMF/OVMF_VARS_4M.fd}"
 MONITOR=/tmp/qemu-monitor-win11$SFX.sock
 PIDFILE=qemu-win11$SFX.pid
 
 # ── 依赖检查 ──
-for c in qemu-system-x86_64 qemu-img mcopy mkfs.vfat unix2dos swtpm; do
+for c in qemu-system-x86_64 qemu-img mcopy mkfs.vfat unix2dos; do
     command -v "$c" >/dev/null || { echo "需要安装: $c"; exit 1; }
 done
-[ -f "$OVMF_CODE" ] || { echo "缺少 OVMF 安全启动固件: $OVMF_CODE"; exit 1; }
+[ -f "$OVMF_CODE" ] || { echo "缺少 OVMF 固件: $OVMF_CODE"; exit 1; }
 [ -f "$OVMF_VARS" ] || { echo "缺少 OVMF VARS 模板: $OVMF_VARS"; exit 1; }
 if [ -e /dev/kvm ]; then
     KVM="-accel kvm"; CPU=(-cpu host)
@@ -81,8 +79,8 @@ if [ -f "$PIDFILE" ]; then
     kill -9 "$(cat "$PIDFILE")" 2>/dev/null || true
     sleep 1
 fi
-rm -f floppy.img "$PIDFILE" "$TPM_PID" "$DISK" "$SNAPSHOT" "$VARS"
-rm -rf _oem_crlf "$TPM_DIR"
+rm -f floppy.img "$PIDFILE" "$DISK" "$SNAPSHOT" "$VARS"
+rm -rf _oem_crlf
 
 # ── Step 1: 创建软盘镜像 ──
 dd if=/dev/zero of=floppy.img bs=512 count=2880 status=none
@@ -105,26 +103,6 @@ rm -rf _oem_crlf
 qemu-img create -f qcow2 "$DISK" 64G >/dev/null
 cp "$OVMF_VARS" "$VARS"
 
-# ── Step 2b: 启动 swtpm（TPM 2.0）──
-# 老 swtpm 可能还占着 $TPM_SOCK，先杀掉并清 socket，否则新 daemon 绑不上、
-# qemu 会连上陈旧实例导致 Windows 报 "必须支持 TPM 2.0"。
-rm -rf "$TPM_DIR" "$TPM_SOCK"
-for p in /proc/[0-9]*/cmdline; do
-    if tr '\0' ' ' < "$p" 2>/dev/null | grep -q "swtpm.*$TPM_SOCK"; then
-        pid=${p#/proc/}; pid=${pid%/cmdline}
-        kill -9 "$pid" 2>/dev/null || true
-    fi
-done
-sleep 1
-mkdir -p "$TPM_DIR"
-swtpm socket \
-    --tpmstate dir="$TPM_DIR" \
-    --ctrl type=unixio,path="$TPM_SOCK" \
-    --tpm2 \
-    --pid file="$TPM_PID" \
-    --daemon
-echo "swtpm 已启动 (PID=$(cat "$TPM_PID"))"
-
 # ── QEMU 启动安装 ──
 # 注1: OVMF 只能用「光学」介质引导 ISO；USB-storage 会被认成硬盘、SATA CD
 #       直接附 as -cdrom。
@@ -136,9 +114,6 @@ qemu-system-x86_64 \
     "${CPU[@]}" \
     -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
     -drive if=pflash,format=raw,file="$VARS" \
-    -chardev socket,id=chrtpm,path="$TPM_SOCK" \
-    -tpmdev emulator,id=tpm0,chardev=chrtpm \
-    -device tpm-tis,tpmdev=tpm0 \
     -hda "$DISK" -m 8192 -smp 4 \
     -cdrom "$ISO" -fda floppy.img -boot order=dc \
     -vga std \
@@ -167,10 +142,8 @@ while [ -f "$PIDFILE" ]; do
 done
 echo ""
 
-# ── Step 5: 清理 swtpm + 安装盘 → ready 盘 ──
+# ── Step 5: 安装盘 → ready 盘 ──
 kill "$KEY_PID" 2>/dev/null || true
-kill "$(cat "$TPM_PID" 2>/dev/null)" 2>/dev/null || true
-rm -f "$TPM_PID"
 mv "$DISK" "$SNAPSHOT"
 echo "安装完成，耗时 $(( $(date +%s) - START_TIME ))s"
 echo "Ready disk: $SNAPSHOT"

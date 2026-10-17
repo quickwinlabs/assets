@@ -46,12 +46,12 @@ jobs:
                       "${AGENT_TOOLSDIRECTORY:-/opt/hostedtoolcache}" || true
           df -h /
 
-      # OVMF 用 Ubuntu 的 ovmf 包（4M secboot，raw .fd），setup-win11.sh 按此路径取
+      # OVMF 用 Ubuntu 的 ovmf 包（4M 非 secboot，raw .fd），setup-win11.sh 按此路径取
       - name: Install QEMU and helpers
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-              qemu-system-x86 qemu-utils ovmf swtpm socat \
+              qemu-system-x86 qemu-utils ovmf socat \
               mtools dosfstools dos2unix genisoimage 7zip
           qemu-system-x86_64 --version | head -1
 
