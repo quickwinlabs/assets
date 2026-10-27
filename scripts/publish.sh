@@ -3,13 +3,14 @@ set -euo pipefail
 
 # ============================================================
 #  下载 ISO → 分卷(<2GiB) → 发布 GitHub Release
-#  用法: ./publish.sh <xp|7u|tiny11|tiny11std>   （CI workflow_dispatch 调用）
+#  用法: ./publish.sh <xp|7u|tiny11|tiny11std|tiny10>   （CI workflow_dispatch 调用）
 #
 #  release tag 按类型固定:
 #    xp       → win-isos-xp           (2 卷, 602MB)
 #    7u       → win-isos-win7         (2 卷, 3.2GB)
 #    tiny11   → win-isos-tiny11       (2 卷, 3.1GB, core)
 #    tiny11std→ win-isos-tiny11-std   (3 卷, 5.3GB, 标准盘)
+#    tiny10   → win-isos-tiny10       (3 卷, 3.6GB, 英文)
 #
 #  资产: ${FILE}.part00..NN (split -b 1800m, cat 可重组)
 #        SHA256SUMS.txt (原始 ISO + 各分卷校验和)
@@ -23,7 +24,8 @@ case "$TYPE" in
     7u|7|win7)          TAG="win-isos-win7";       DL_ARG="7u" ;;
     tiny11)             TAG="win-isos-tiny11";     DL_ARG="tiny11" ;;
     tiny11std)          TAG="win-isos-tiny11-std"; DL_ARG="tiny11std" ;;
-    *) echo "用法: $0 <xp|7u|tiny11|tiny11std>"; exit 1 ;;
+    tiny10)             TAG="win-isos-tiny10";     DL_ARG="tiny10" ;;
+    *) echo "用法: $0 <xp|7u|tiny11|tiny11std|tiny10>"; exit 1 ;;
 esac
 
 command -v gh >/dev/null 2>&1 || { echo "[ERROR] 需要 gh CLI"; exit 1; }

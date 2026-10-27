@@ -3,10 +3,11 @@ set -e
 
 # ============================================================
 #  自动下载 Windows ISO
-#  用法: ./download-iso.sh <xp|7u|10|11|tiny11|tiny11std> [目标目录]
+#  用法: ./download-iso.sh <xp|7u|10|11|tiny11|tiny11std|tiny10> [目标目录]
 #
 #  镜像源: download.testip.xyz (主), archive.org (备); 10/11 仍用 bobpony/files.dog
 #           tiny11/tiny11std 走 archive.org(NTDEV 官方 item 的 Nov25 批次)
+#           tiny10 走 archive.org(NTDEV 官方 item, 单源)
 #  注: SourceForge 对 GitHub runner IP 段间歇 403(Cloudflare 反爬),不作主源
 #  下载完成后校验 SHA256
 # ============================================================
@@ -21,7 +22,7 @@ warn()  { echo -e "${YELLOW}[$(ts)] [WARN]${NC} $*"; }
 error() { echo -e "${RED}[$(ts)] [ERROR]${NC} $*"; exit 1; }
 
 if [ -z "$VERSION" ]; then
-    echo "用法: $0 <xp|7u|10|11|tiny11|tiny11std> [目标目录]"
+    echo "用法: $0 <xp|7u|10|11|tiny11|tiny11std|tiny10> [目标目录]"
     echo ""
     echo "  xp       - Windows XP Professional SP3 中文 VL (601MB)"
     echo "  7u       - Windows 7 Ultimate SP1 x64 中文 (3.2GB)"
@@ -29,6 +30,7 @@ if [ -z "$VERSION" ]; then
     echo "  11       - Windows 11 25H2 x64 (7.9GB)"
     echo "  tiny11   - Tiny11 Core 25H2 Pro x64 英文 (3.3GB, 不可服务化精简版)"
     echo "  tiny11std- Tiny11 25H2 Pro x64 英文 标准版 (5.3GB, 可服务化, 自带 Defender)"
+    echo "  tiny10   - Tiny10 23H2 x64 英文 (3.6GB, 可服务化, 基于 Win10 LTSC 2021)"
     exit 1
 fi
 
@@ -112,8 +114,20 @@ get_iso_info() {
                 "https://archive.org/download/tiny11_25H2/tiny11_25H2_Nov25.iso"
             )
             ;;
+        "tiny10" )
+            # NTDEV tiny10 23H2 x64 —— 基于 Win10 LTSC 2021(21H2 / 19044), 可服务化,
+            # 面向低配机; 与 tiny11 不同, 没有 core/标准盘之分, 只有这一条主线。
+            # archive.org 上的原始文件名带空格("tiny10 x64 23h2.iso"), 用 wget -O 落成本地名。
+            # 第三方单源, SIZE/SHA 留空 —— 精确值由发布时实测写入 release 的 SHA256SUMS.txt。
+            FILE="tiny10_23H2_x64.iso"
+            SIZE=""
+            SHA=""
+            URLS=(
+                "https://archive.org/download/tiny-10-23-h2/tiny10%20x64%2023h2.iso"
+            )
+            ;;
         * )
-            error "不支持的版本: $version (支持: xp, 7u, 10, 11, tiny11, tiny11std)"
+            error "不支持的版本: $version (支持: xp, 7u, 10, 11, tiny11, tiny11std, tiny10)"
             ;;
     esac
 }
