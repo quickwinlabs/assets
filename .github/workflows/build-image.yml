@@ -13,7 +13,7 @@ on:
         description: '要构建的类型'
         required: true
         type: choice
-        options: [xp, win7, win11]
+        options: [xp, win7, win11, tiny10]
       publish:
         description: '构建完成后发布到 release（取消勾选 = 只构建不发布）'
         required: false
@@ -74,11 +74,22 @@ jobs:
       - name: Fetch ISO from win-isos-* release
         run: |
           case "${{ inputs.type }}" in
-            xp)    ISO_TYPE=xp;        ISO_DIR=images/iso/xp ;;
-            win7)  ISO_TYPE=7u;        ISO_DIR=images/iso/win7 ;;
-            win11) ISO_TYPE=tiny11std; ISO_DIR=images/iso/win11 ;;
+            xp)     ISO_TYPE=xp;        ISO_DIR=images/iso/xp ;;
+            win7)   ISO_TYPE=7u;        ISO_DIR=images/iso/win7 ;;
+            win11)  ISO_TYPE=tiny11std; ISO_DIR=images/iso/win11 ;;
+            tiny10) ISO_TYPE=tiny10;    ISO_DIR=images/iso/tiny10 ;;
           esac
           ./scripts/fetch-release-iso.sh "$ISO_TYPE" "$ISO_DIR"
+
+      # type 是装机脚本/ISO 的名字，release 与产物盘按 VM 名走：
+      # tiny10 装出来的盘是 win10_ready.qcow2，发布到 win-images-win10。
+      - name: Resolve release tag
+        id: rel
+        run: |
+          case "${{ inputs.type }}" in
+            tiny10) echo "tag=win-images-win10" >> "$GITHUB_OUTPUT" ;;
+            *)      echo "tag=win-images-${{ inputs.type }}" >> "$GITHUB_OUTPUT" ;;
+          esac
 
       - name: Install Windows (${{ inputs.type }})
         working-directory: images
@@ -92,7 +103,7 @@ jobs:
 
       - name: Package and publish
         if: ${{ inputs.publish }}
-        run: ./scripts/make-image-release.sh "${{ inputs.type }}" "win-images-${{ inputs.type }}"
+        run: ./scripts/make-image-release.sh "${{ inputs.type }}" "${{ steps.rel.outputs.tag }}"
 
       - name: Summary
         if: always()

@@ -15,6 +15,10 @@ quickwin CI/开发用的二进制资产仓:Windows 测试 ISO 与预装系统盘
 | Win7 | `win-isos-win7` | `build-win7.yml` | `cn_windows_7_ultimate_with_sp1_x64_dvd_u_677408.iso` | 3.2GB |
 | Tiny11 Core | `win-isos-tiny11` | `build-tiny11.yml` | `tiny11core_25H2_Nov25.iso` | 3.3GB |
 | Tiny11 标准盘 | `win-isos-tiny11-std` | `build-tiny11-std.yml` | `tiny11_25H2_Nov25.iso` | 5.3GB |
+| Tiny10 23H2 | `win-isos-tiny10` | `build-tiny10.yml` | `tiny10_23H2_x64.iso` | 3.6GB |
+
+Tiny10 23H2 是英文盘(NTDEV 精简,基于 Win10 LTSC 2021 / 19044):系统语言只有
+en-US,没有中文输入法;中文字体(`msyh`/`simsun`)保留,中文能正常显示。
 
 ### 消费方式
 
@@ -45,6 +49,7 @@ sha256 是唯一 integrity 锚点:release 资产可被重跑覆盖(`--clobber`),
 | XP | `win-images-xp` | `win-isos-xp` | `xp_ready.qcow2` | 1.46GiB → 0.75GiB (52%) | 1 |
 | Win7 | `win-images-win7` | `win-isos-win7` | `win7_ready.qcow2` | 7.33GiB → 3.36GiB (46%) | 2 |
 | Tiny11 标准盘 | `win-images-win11` | `win-isos-tiny11-std` | `win11_ready.qcow2` | 12.7GiB → 10.4GiB (82%) | 6 |
+| Tiny10 23H2 | `win-images-win10` | `win-isos-tiny10` | `win10_ready.qcow2` | 8.16GiB → 4.24GiB (52%) | 3 |
 
 (以上为 2026-10 实测值。win11 压不动是有原因的:25H2 盘里大部分是已压缩内容
 ——installer 载荷、Defender 定义库,不像 XP/Win7 那样满是可压的系统文件。)

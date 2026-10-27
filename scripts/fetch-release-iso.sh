@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ============================================================
 #  从本仓的 win-isos-* release 拉一份 ISO（分卷 + SHA256SUMS 校验）
-#  用法: ./fetch-release-iso.sh <xp|7u|tiny11|tiny11std> [目标目录]
+#  用法: ./fetch-release-iso.sh <xp|7u|tiny11|tiny11std|tiny10> [目标目录]
 #
 #  供 images/setup-*.sh 装机使用 —— 装机只吃本仓已发布的 ISO，
 #  装出来的盘与发布出去的盘是同一份，和上游镜像源当前是否可达无关。
@@ -19,7 +19,8 @@ case "$TYPE" in
     7u|7|win7)   TAG="win-isos-win7" ;;
     tiny11)      TAG="win-isos-tiny11" ;;
     tiny11std)   TAG="win-isos-tiny11-std" ;;
-    *) echo "用法: $0 <xp|7u|tiny11|tiny11std> [目标目录]"; exit 1 ;;
+    tiny10)      TAG="win-isos-tiny10" ;;
+    *) echo "用法: $0 <xp|7u|tiny11|tiny11std|tiny10> [目标目录]"; exit 1 ;;
 esac
 
 command -v gh >/dev/null 2>&1 || { echo "[ERROR] 需要 gh CLI"; exit 1; }

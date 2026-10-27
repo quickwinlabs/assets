@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ============================================================
 #  预装系统盘 → 压缩(qcow2 zstd) → 分卷(<2GiB) → 发布 GitHub Release
-#  用法: ./make-image-release.sh <xp|win7|win11|win11core> <tag> [输入盘路径]
+#  用法: ./make-image-release.sh <xp|win7|win11|win11core|tiny10> <tag> [输入盘路径]
 #  例:   ./make-image-release.sh win7 win-images-win7
 #
 #  输入盘默认取 images/snapshots/<name>_ready.qcow2（setup-*.sh 的产物）。
@@ -22,7 +22,8 @@ case "$TYPE" in
     win7)     NAME="win7_ready.qcow2"      ; ISO_TAG="win-isos-win7"       ;;
     win11)    NAME="win11_ready.qcow2"     ; ISO_TAG="win-isos-tiny11-std" ;;
     win11core) NAME="win11_ready-core.qcow2"; ISO_TAG="win-isos-tiny11"     ;;
-    *) echo "用法: $0 <xp|win7|win11|win11core> <tag> [输入盘路径]"; exit 1 ;;
+    tiny10)   NAME="win10_ready.qcow2"     ; ISO_TAG="win-isos-tiny10"     ;;
+    *) echo "用法: $0 <xp|win7|win11|win11core|tiny10> <tag> [输入盘路径]"; exit 1 ;;
 esac
 [ -n "$TAG" ] || { echo "用法: $0 <$TYPE> <tag> [输入盘路径]"; exit 1; }
 
