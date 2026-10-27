@@ -56,22 +56,110 @@ sha256 是唯一 integrity 锚点:release 资产可被重跑覆盖(`--clobber`),
 
 ### 消费方式
 
+参考实现在 [quickwin/docker](https://github.com/quickwinlabs/quickwin/tree/main/docker),
+拉盘、起机、SMB 共享、下发测试都已接好。下面两条路任选。
+
+**A. 用 quickwin 的 docker/**(推荐)
+
+```bash
+cd quickwin/docker
+./scripts/fetch-ready.sh win7    # 拉分卷 → 校验 → 拼成 snapshots/win7_ready.qcow2
+./run.sh win7                    # 叠 overlay、起 QEMU、等 execd 健康
+./http_test.sh win7              # 经 execd 下发 test/run.js
+```
+
+**B. 裸 qemu 手动起**(只需要本仓的盘)
+
 ```bash
 # 1. 拉分卷 + 校验 + 重组
 gh release download win-images-win7 -D .
 cat win7_ready.qcow2.part* > win7_ready.qcow2
 sha256sum -c SHA256SUMS.txt
 
-# 2. 交给 quickwin:放到 docker/snapshots/ 后即可
-#    cd quickwin/docker && ./run.sh win7
-#    (run.sh 自己创建 overlay;单独手动跑则:)
-qemu-img create -f qcow2 -b win7_ready.qcow2 -F qcow2 overlay.qcow2
+# 2. 叠 overlay —— 压缩盘是只读形态,不能直接写
+qemu-img create -f qcow2 -b win7_ready.qcow2 -F qcow2 win7_test.qcow2
+
+# 3. 起机(SMB 共享不能省,见下节)
+qemu-system-x86_64 -accel kvm \
+  -hda win7_test.qcow2 -m 4096 -smp 4 \
+  -netdev user,id=net0,guestfwd=tcp:10.0.2.4:445-cmd:"$PWD/smb_wrapper.sh",hostfwd=tcp::8007-:8080 \
+  -device e1000,netdev=net0 \
+  -display none -vnc 0.0.0.0:2 \
+  -monitor unix:/tmp/qemu-monitor-win7.sock,server,nowait \
+  -daemonize
 ```
 
-装机侧取 ISO 用 `scripts/fetch-release-iso.sh <xp|7u|tiny11|tiny11std> <目录>`
-(拉对应 ISO release 的分卷 → 校验 → 拼回整盘)。注意它与 `publish.sh` 用的
-`download-iso.sh` 方向相反:后者拉**上游镜像源**(发布用),前者拉**已发布的
-release**(装机用),不要互相调用。
+两个必须注意的:
+
+- `-b` 用 **basename**(相对路径)。qcow2 的 backing 名按"相对 overlay 所在目录"记录,
+  写成绝对路径后换个目录/换台机器就打不开,所以 overlay 要和盘放同一目录。
+- 别把压缩盘当可写盘直接挂(只读形态,写进去会报错或丢数据),必须叠 overlay。
+
+### 盘不自足:必须配 SMB 共享
+
+盘里只有系统 + `C:\OEM\bootstrap.bat`(注册在 `Run` 键自动启动;XP 在 `HKLM`,
+Win7/Win11 在 `HKCU`)。开机后的链路是:
+
+```plain
+bootstrap.bat(Run 键自动触发)
+  -> net use Z: \\10.0.2.4\qemu     # 宿主的 SMB 共享
+  -> call Z:\run.bat                # 关防火墙、配 portproxy、起 execd
+```
+
+**`run.bat` 和 `execd.exe` 都不在盘里**,在宿主共享目录里。所以:
+
+- 不给共享 → 系统能起来,但 execd 永远不会启动(`C:\Windows\Temp\bootstrap.log`
+  里是 `SMB mount FAILED`)
+- XP 只支持 SMB1,QEMU 自带的 `-smb` 是 SMB2/3 且不可配 → 必须用 `guestfwd` 挂自管的
+  smbd,见 [smb_wrapper.sh](https://github.com/quickwinlabs/quickwin/blob/main/docker/smb_wrapper.sh)
+
+`run.bat` 在 [ci_share/run.bat](https://github.com/quickwinlabs/quickwin/blob/main/docker/ci_share/run.bat),
+共享目录是 `docker/ci_share/`(其中 `quickwin` 是指向编译产物的 symlink)。`execd.exe`
+同样不在盘里,直接下
+[execd-x86.exe](https://github.com/quickwinlabs/quickwin/releases/latest/download/execd-x86.exe)
+→ 存成 `execd.exe`(`run.bat` 认的是这个文件名);32 位 exe 在 x64 上走 WoW64,同样能用。
+
+也可以本地 `make execd`(源码在 [examples/execd](https://github.com/quickwinlabs/quickwin/tree/main/examples/execd)),
+产出 `_build/execd.exe`。
+
+### 端口 / 硬件对照
+
+抄自 [run.sh](https://github.com/quickwinlabs/quickwin/blob/main/docker/run.sh) 的 case 表,
+改这里前先改那边。助记:`HTTP = 8000+版本号`,`noVNC = 6000+版本号`。
+
+| VM | hostfwd | noVNC | VNC display | machine | 网卡 | mem / smp |
+|---|---|---|---|---|---|---|
+| XP | 8005 | 6005 | `:1` | `pc-i440fx-5.2` + `-cpu qemu32` | rtl8139 | 1024 / 1 |
+| Win7 | 8007 | 6007 | `:2` | 默认 | e1000 | 4096 / 4 |
+| Win11 | 8011 | 6011 | `:3` | `q35` + OVMF 4M pflash | e1000e | 8192 / 4 |
+
+XP/Win7 是 BIOS/MBR,Win11 是 UEFI/GPT 装的、必须 pflash 引导。两边都不需要
+TPM 或 Secure Boot。
+
+## 起来之后:用 execd
+
+execd 常驻在 guest 的 8080,由 hostfwd 映射到宿主的 `8000+版本号`。**它是自描述的**:
+任意非 API 路径返回完整端点与参数,所以下面只列最常用的三条,端点全集以服务自描述为准。
+
+```bash
+# 自描述 + 探活:免鉴权,VM 刚起来 token 还没配时也能用
+curl http://127.0.0.1:8007/
+
+# 跑命令:输出流式回来,退出码在 HTTP trailer(不在 header)
+curl -X POST http://127.0.0.1:8007/exec \
+  -H 'Content-Type: application/json' -d '{"cmd":"ver"}'
+
+# 起常驻 GUI:/exec 会挂到超时且断连即 kill,常驻程序必须用 /spawn
+curl -s -X POST http://127.0.0.1:8007/spawn \
+  -H 'Content-Type: application/json' -d '{"cmd":"Z:\\quickwin\\app.exe"}'
+```
+
+三条容易踩的语义:
+
+- **编码**:`/exec` 恒走 `cmd.exe /u`,cmd 内建命令(`dir`/`type`)输出是 **UTF-16LE**;
+  外部程序仍是各自原生编码(中文系统 GBK)。测试输出是 UTF-8/ASCII,不受影响。
+- **断连即 kill**:客户端断开,服务端 `taskkill /F /T` 递归清掉整棵进程树。
+- **timeout 默认无限**:不传就一直跑;传了到点强杀,trailer 记 `X-Exit-Code: -1`。
 
 ## 刷新 / 新增资产族
 
@@ -83,10 +171,15 @@ release**(装机用),不要互相调用。
   删掉再上传,所以分卷数变化不会留下孤儿卷。
 - **盘新增类型**:在 `scripts/make-image-release.sh` 的 case 表 + `build-image.yml`
   的 `type` 选项各加一项;装新系统还要加 `images/setup-<type>.sh` 与其 floppy 目录。
-- **装机脚本**:`images/setup-*.sh` 是 quickwin `docker/setup-*.sh` 的副本,
-  改装机逻辑时两边都要改(差异只在 ISO 来源、OVMF 路径与产物用途)。
-  Win11 两侧都**不含 TPM/Secure Boot**:硬件检查由 `Autounattend.xml` 的
-  `LabConfig` 键在 WinPE 阶段绕过,runner 侧因此用非 secboot 的 4M OVMF。
+- **装机取 ISO**:`images/setup-*.sh` 用
+  `scripts/fetch-release-iso.sh <xp|7u|tiny11|tiny11std> <目录>`
+  拉**已发布的 release**(分卷 → 校验 → 拼回整盘)。
+  它与 `publish.sh` 用的 `download-iso.sh` 方向相反——后者拉**上游镜像源**(发布用),
+  不要互相调用。
+- **装机脚本**:`images/setup-*.sh` 是装机逻辑的唯一维护地(quickwin 仓已无装机脚本,
+  只剩 `docker/run.sh` 这一套运行时)。Win11 盘**不含 TPM/Secure Boot**:硬件检查由
+  `Autounattend.xml` 的 `LabConfig` 键在 WinPE 阶段绕过,runner 侧因此用非 secboot
+  的 4M OVMF。
 
 ## 版权说明
 
